@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import Dexie from 'dexie';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { WORD_PACKS } from './packs';
+import { IRREGULAR_VERBS_PACK, SEED_WORD_PACKS, WORD_PACKS } from './packs';
 import { SEED_CATEGORIES } from './seed';
 
 async function loadApp() {
@@ -37,7 +37,7 @@ describe('migracja v3 → v4', () => {
     old.close();
 
     const db = await loadApp();
-    expect(db.verno).toBe(4);
+    expect(db.verno).toBe(5);
 
     // Stare dane bez zmian.
     const cat = await db.words.where('en').equals('cat').first().catch(() => undefined);
@@ -49,8 +49,11 @@ describe('migracja v3 → v4', () => {
     const cats = await db.categories.orderBy('position').toArray();
     expect(cats.filter((c) => c.name === 'UI i UX')).toHaveLength(1);
     const newNames = WORD_PACKS.map((p) => p.name).filter((n) => n !== 'UI i UX');
-    expect(cats.slice(-4).map((c) => c.name)).toEqual(newNames);
-    expect(cats.slice(-4).map((c) => c.position)).toEqual([43, 44, 45, 46]);
+    // v4 dopisuje 4 brakujące kategorie, potem v5 „Czasowniki nieregularne”.
+    expect(cats.slice(-5).map((c) => c.name)).toEqual([...newNames, IRREGULAR_VERBS_PACK.name]);
+    expect(cats.slice(-5).map((c) => c.position)).toEqual([43, 44, 45, 46, 47]);
+    // Startowych kategorii nie było w tej bazie – v5 ich nie zakłada.
+    expect(cats.find((c) => c.name === 'Cześć!')).toBeUndefined();
 
     // Słówka z list: wszystkie w nowych kategoriach, w „UI i UX” bez duplikatu „wireframe”.
     for (const pack of WORD_PACKS) {
@@ -68,12 +71,51 @@ describe('migracja v3 → v4', () => {
     expect(focus?.pronunciation).toBe('FOŁ-kus');
   });
 
-  it('nowa instalacja: 40 kategorii startowych + 5 ze słówkami', async () => {
+  it('nowa instalacja: 40 kategorii startowych ze słówkami + 5 gotowych + czasowniki', async () => {
     const db = await loadApp();
     const cats = await db.categories.orderBy('position').toArray();
-    expect(cats).toHaveLength(SEED_CATEGORIES.length + WORD_PACKS.length);
-    expect(cats.slice(-5).map((c) => c.name)).toEqual(WORD_PACKS.map((p) => p.name));
-    const total = WORD_PACKS.reduce((n, p) => n + p.words.length, 0);
-    expect(await db.words.count()).toBe(total);
+    expect(cats).toHaveLength(SEED_CATEGORIES.length + WORD_PACKS.length + 1);
+    expect(cats.slice(-6).map((c) => c.name)).toEqual([...WORD_PACKS.map((p) => p.name), IRREGULAR_VERBS_PACK.name]);
+    const all = [...WORD_PACKS, ...SEED_WORD_PACKS, IRREGULAR_VERBS_PACK];
+    expect(await db.words.count()).toBe(all.reduce((n, p) => n + p.words.length, 0));
+    const hello = cats.find((c) => c.name === 'Cześć!')!;
+    expect(await db.words.where('categoryId').equals(hello.id).count()).toBe(50);
+  });
+});
+
+describe('migracja v4 → v5', () => {
+  it('dopisuje po 50 słówek do istniejących startowych kategorii, nie przywraca usuniętych', async () => {
+    // Wersja v4: startowe kategorie (bez „Hotel” – usunięta), własne słówko w „Cześć!”, 5 gotowych kategorii.
+    const old = new Dexie('fiszki');
+    old.version(4).stores({ categories: '++id, name, position', words: '++id, categoryId, due', meta: 'key' });
+    await old.open();
+    const seeds = SEED_CATEGORIES.filter((c) => c.name !== 'Hotel');
+    await old.table('categories').bulkAdd(seeds.map((c, i) => ({ ...c, position: i + 1, createdAt: 1 })));
+    const n = seeds.length;
+    await old
+      .table('categories')
+      .bulkAdd(WORD_PACKS.map((p, i) => ({ name: p.name, description: p.description, position: n + i + 1, createdAt: 2 })));
+    const helloId = (await old.table('categories').where('name').equals('Cześć!').first()).id;
+    await old.table('words').add({
+      categoryId: helloId, en: 'Hello', pl: 'moje cześć', interval: 3, ease: 2.7, due: 77, reps: 2, lapses: 0, createdAt: 3,
+    });
+    old.close();
+
+    const db = await loadApp();
+    expect(db.verno).toBe(5);
+    const cats = await db.categories.orderBy('position').toArray();
+
+    expect(cats.find((c) => c.name === 'Hotel')).toBeUndefined();
+    expect(cats.at(-1)).toMatchObject({ name: IRREGULAR_VERBS_PACK.name, position: n + WORD_PACKS.length + 1 });
+
+    const hello = await db.words.where('categoryId').equals(helloId).toArray();
+    expect(hello).toHaveLength(50); // 49 nowych + jej „Hello” (bez duplikatu)
+    expect(hello.find((w) => w.en === 'Hello')).toMatchObject({ pl: 'moje cześć', reps: 2, due: 77 });
+
+    const sport = cats.find((c) => c.name === 'Sport')!;
+    expect(await db.words.where('categoryId').equals(sport.id).count()).toBe(50);
+
+    const verbs = await db.words.where('categoryId').equals(cats.at(-1)!.id).toArray();
+    expect(verbs.find((w) => w.en === 'go – went – gone')).toMatchObject({ pl: 'iść, jechać' });
   });
 });

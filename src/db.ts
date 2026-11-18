@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable, type Transaction } from 'dexie';
 import { SEED_CATEGORIES } from './seed';
-import { WORD_PACKS, type WordPack } from './packs';
+import { IRREGULAR_VERBS_PACK, SEED_WORD_PACKS, WORD_PACKS, type WordPack } from './packs';
 
 export interface Category {
   id: number;
@@ -87,8 +87,9 @@ db.version(3)
 /**
  * Dopisuje gotowe kategorie ze słówkami (np. WCAG, AI) na koniec listy.
  * Jeśli kategoria o tej nazwie już istnieje, dodaje do niej tylko brakujące słówka (po angielskim słowie).
+ * `createMissing: false` – brakującej kategorii nie zakłada (np. startowej, którą użytkowniczka usunęła).
  */
-async function installWordPacks(tx: Transaction, packs: WordPack[]) {
+async function installWordPacks(tx: Transaction, packs: WordPack[], { createMissing = true } = {}) {
   const categories = tx.table<Category, number>('categories');
   const words = tx.table<Word, number>('words');
   const all = await categories.toArray();
@@ -97,6 +98,7 @@ async function installWordPacks(tx: Transaction, packs: WordPack[]) {
   let t = now;
   for (const pack of packs) {
     const match = all.find((c) => c.name.trim().toLowerCase() === pack.name.toLowerCase());
+    if (!match && !createMissing) continue;
     const categoryId =
       match?.id ??
       (await categories.add({ name: pack.name, description: pack.description, position: ++pos, createdAt: now } as Category));
@@ -126,11 +128,22 @@ db.version(4)
   .stores({})
   .upgrade((tx) => installWordPacks(tx, WORD_PACKS));
 
+// v5: po 50 słówek do każdej z 40 startowych kategorii (tylko istniejących – usunięte nie wracają)
+// + nowa kategoria „Czasowniki nieregularne” na końcu listy.
+db.version(5)
+  .stores({})
+  .upgrade(async (tx) => {
+    await installWordPacks(tx, SEED_WORD_PACKS, { createMissing: false });
+    await installWordPacks(tx, [IRREGULAR_VERBS_PACK]);
+  });
+
 // Pierwsze uruchomienie (pusta baza): od razu gotowe kategorie.
 db.on('populate', async (tx) => {
   const now = Date.now();
   await tx.table('categories').bulkAdd(SEED_CATEGORIES.map((s, i) => ({ ...s, position: i + 1, createdAt: now })));
   await installWordPacks(tx, WORD_PACKS);
+  await installWordPacks(tx, SEED_WORD_PACKS, { createMissing: false });
+  await installWordPacks(tx, [IRREGULAR_VERBS_PACK]);
 });
 
 /** Kategorie w kolejności wyświetlania. */

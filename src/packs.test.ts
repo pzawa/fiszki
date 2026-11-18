@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { WORD_PACKS, parsePack } from './packs';
+import { IRREGULAR_VERBS_PACK, SEED_WORD_PACKS, WORD_PACKS, parsePack, parseSections } from './packs';
 import { SEED_CATEGORIES } from './seed';
 
 describe('gotowe kategorie ze słówkami', () => {
@@ -40,5 +40,36 @@ describe('gotowe kategorie ze słówkami', () => {
       { en: 'alt text', pl: 'tekst alternatywny' },
     ]);
     expect(() => parsePack('samo słowo')).toThrow();
+  });
+});
+
+describe('słówka do 40 startowych kategorii', () => {
+  it('każda startowa kategoria ma dokładnie 50 słówek, nazwy jak w seed.ts', () => {
+    expect(SEED_WORD_PACKS.map((p) => p.name)).toEqual(SEED_CATEGORIES.map((c) => c.name));
+    for (const pack of SEED_WORD_PACKS) {
+      expect(pack.words, pack.name).toHaveLength(50);
+      const ens = pack.words.map((w) => w.en.toLowerCase());
+      expect(new Set(ens).size, pack.name).toBe(50);
+    }
+  });
+
+  it('parser sekcji', () => {
+    expect(parseSections('## A\nx | iks\n\n## B\ny | igrek | i')).toEqual([
+      { name: 'A', words: [{ en: 'x', pl: 'iks' }] },
+      { name: 'B', words: [{ en: 'y', pl: 'igrek', pronunciation: 'i' }] },
+    ]);
+    expect(() => parseSections('x | iks')).toThrow();
+  });
+});
+
+describe('czasowniki nieregularne', () => {
+  it('trzy formy po angielsku, wymowa trzech form, bez powtórzeń', () => {
+    const { words } = IRREGULAR_VERBS_PACK;
+    expect(words.length).toBeGreaterThanOrEqual(100);
+    for (const w of words) {
+      expect(w.en.split(' – '), w.en).toHaveLength(3);
+      expect(w.pronunciation?.split(' – '), w.en).toHaveLength(3);
+    }
+    expect(new Set(words.map((w) => w.en)).size).toBe(words.length);
   });
 });

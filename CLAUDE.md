@@ -26,6 +26,10 @@ Nowe pola w typach oznaczaj jako opcjonalne albo uzupełniaj je w `upgrade`.
   kategorie, napisz nową wersję bazy z `upgrade`, która dopisze tylko brakujące (po nazwie). Nie przywracaj kategorii,
   które użytkowniczka usunęła.
 - Kolejność to pole `position`. Własne kategorie dostają `max(position) + 1`.
+- Gotowe słówka (`src/packs.ts`, listy w `src/packs/`) dodaje `installWordPacks` w `src/db.ts`: v4 – 5 kategorii
+  (WCAG, AI, Frontend, UI i UX, Claude Code), v5 – po 50 słówek do 40 startowych (`createMissing: false`, więc
+  usunięta kategoria nie wraca) i „Czasowniki nieregularne”. Słówka już obecne w kategorii (po `en`) są pomijane.
+  Nie zmieniaj list użytych przez istniejące wersje – nowe słówka to nowa wersja bazy.
 
 ## Przed publikacją
 - `npm test` i `npm run build` muszą przechodzić,
