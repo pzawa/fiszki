@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import type { WordInput } from '../db';
 import Icon from './Icon';
 
@@ -18,6 +18,13 @@ export default function WordForm({ initial, submitLabel, onSubmit, onCancel }: P
   const [example, setExample] = useState(initial?.example ?? '');
   const [pronunciation, setPronunciation] = useState(initial?.pronunciation ?? '');
   const [status, setStatus] = useState('');
+
+  // Komunikat "Dodano: …" znika sam po kilku sekundach.
+  useEffect(() => {
+    if (!status) return;
+    const t = setTimeout(() => setStatus(''), 4000);
+    return () => clearTimeout(t);
+  }, [status]);
 
   const valid = en.trim() !== '' && pl.trim() !== '';
 
@@ -122,7 +129,8 @@ export default function WordForm({ initial, submitLabel, onSubmit, onCancel }: P
           </button>
         )}
       </div>
-      <p className="sr-only" role="status" aria-live="polite">
+      <p className={status ? 'form-status' : 'sr-only'} role="status" aria-live="polite">
+        {status && <Icon name="check" size={18} />}
         {status}
       </p>
     </form>
