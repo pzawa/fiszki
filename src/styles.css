@@ -424,42 +424,81 @@ label {
   grid-column: 1 / -1;
 }
 
-.form-status {
+.form-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Potwierdzenie dodania słówka ---------- */
+
+.word-form .form-status {
   grid-column: 1 / -1;
+}
+
+.form-status:empty {
+  display: none;
+}
+
+.added-toast {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin: 0;
   padding: 10px 14px;
   border-radius: var(--radius-sm);
   background: var(--good-bg);
   color: var(--good);
-  font-weight: 600;
-  overflow-wrap: anywhere;
-  animation: form-status-in 0.2s ease-out;
+  animation: added-in 0.25s ease-out, added-out 0.4s ease-in 3.6s forwards;
 }
 
-.form-status svg {
+.added-toast strong {
+  font-weight: 700;
+}
+
+.added-check {
+  display: inline-grid;
+  place-items: center;
   flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--good);
+  color: var(--good-bg);
+  animation: added-pop 0.35s ease-out;
 }
 
-@keyframes form-status-in {
+.word-item.just-added {
+  animation: just-added 2.5s ease-out;
+}
+
+@keyframes added-in {
   from {
     opacity: 0;
     transform: translateY(-4px);
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .form-status {
-    animation: none;
+@keyframes added-out {
+  to {
+    opacity: 0;
   }
 }
 
-.form-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+@keyframes added-pop {
+  0% {
+    transform: scale(0.4);
+  }
+  70% {
+    transform: scale(1.15);
+  }
+}
+
+@keyframes just-added {
+  0%,
+  40% {
+    background: var(--good-bg);
+  }
 }
 
 .search {

@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { addWord, db, deleteCategory, deleteWord, renameCategory, updateWord, type Word } from '../db';
 import WordForm from '../components/WordForm';
+import Pron from '../components/Pron';
 import Icon from '../components/Icon';
 import { Avatar, plural } from './CategoriesPage';
 import { formatDelay, isDueToday, isNew } from '../srs';
@@ -20,7 +21,15 @@ export default function CategoryPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [filter, setFilter] = useState('');
   const [renaming, setRenaming] = useState<string | null>(null);
+  const [justAddedId, setJustAddedId] = useState<number | null>(null);
   const navigate = useNavigate();
+
+  // Podświetlenie świeżo dodanego słówka gaśnie po chwili.
+  useEffect(() => {
+    if (justAddedId === null) return;
+    const t = setTimeout(() => setJustAddedId(null), 2500);
+    return () => clearTimeout(t);
+  }, [justAddedId]);
 
   if (category === undefined && words !== undefined) {
     return (
@@ -56,8 +65,10 @@ export default function CategoryPage() {
 
   async function handleAdd(input: Parameters<typeof addWord>[1]) {
     const dup = words!.find((w) => w.en.trim().toLowerCase() === input.en.trim().toLowerCase());
-    if (dup && !confirm(`Słówko „${dup.en}” już jest w tej kategorii (${dup.pl}). Dodać mimo to?`)) return;
-    await addWord(id, input);
+    if (dup && !confirm(`Słówko „${dup.en}” już jest w tej kategorii (${dup.pl}). Dodać mimo to?`)) return false;
+    const newId = await addWord(id, input);
+    setFilter('');
+    setJustAddedId(newId);
   }
 
   return (
@@ -166,12 +177,12 @@ export default function CategoryPage() {
                   />
                 </li>
               ) : (
-                <li key={w.id} className="word-item">
+                <li key={w.id} className={w.id === justAddedId ? 'word-item just-added' : 'word-item'}>
                   <div className="word-main">
                     <span className="en" lang="en">
                       {w.en}
-                      {w.pronunciation && <span className="pron"> [{w.pronunciation}]</span>}
                     </span>
+                    {w.pronunciation && <Pron text={w.pronunciation} />}
                     <span className="pl">{w.pl}</span>
                     {w.example && (
                       <span className="example" lang="en">

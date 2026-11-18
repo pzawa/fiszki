@@ -5,8 +5,15 @@ import Icon from './Icon';
 interface Props {
   initial?: WordInput;
   submitLabel: string;
-  onSubmit: (input: WordInput) => Promise<unknown> | void;
+  /** Zwróć `false`, żeby anulować (formularz zostanie wypełniony). */
+  onSubmit: (input: WordInput) => Promise<unknown> | unknown;
   onCancel?: () => void;
+}
+
+interface Added {
+  en: string;
+  pl: string;
+  key: number;
 }
 
 export default function WordForm({ initial, submitLabel, onSubmit, onCancel }: Props) {
@@ -16,15 +23,16 @@ export default function WordForm({ initial, submitLabel, onSubmit, onCancel }: P
   const [en, setEn] = useState(initial?.en ?? '');
   const [pl, setPl] = useState(initial?.pl ?? '');
   const [example, setExample] = useState(initial?.example ?? '');
-  const [pronunciation, setPronunciation] = useState(initial?.pronunciation ?? '');
-  const [status, setStatus] = useState('');
+  const [pron, setPron] = useState(initial?.pronunciation ?? '');
+  const [saving, setSaving] = useState(false);
+  const [added, setAdded] = useState<Added | null>(null);
 
-  // Komunikat "Dodano: …" znika sam po kilku sekundach.
+  // Komunikat „Dodano” znika po kilku sekundach.
   useEffect(() => {
-    if (!status) return;
-    const t = setTimeout(() => setStatus(''), 4000);
+    if (!added) return;
+    const t = setTimeout(() => setAdded(null), 4000);
     return () => clearTimeout(t);
-  }, [status]);
+  }, [added]);
 
   const valid = en.trim() !== '' && pl.trim() !== '';
 
@@ -46,15 +54,21 @@ export default function WordForm({ initial, submitLabel, onSubmit, onCancel }: P
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!valid) return;
-    await onSubmit({ en, pl, example, pronunciation });
-    if (!initial) {
-      setStatus(`Dodano: ${en.trim()} – ${pl.trim()}`);
-      setEn('');
-      setPl('');
-      setExample('');
-      setPronunciation('');
-      enRef.current?.focus();
+    if (!valid || saving) return;
+    setSaving(true);
+    try {
+      const result = await onSubmit({ en, pl, example, pronunciation: pron });
+      if (result === false) return;
+      if (!initial) {
+        setAdded({ en: en.trim(), pl: pl.trim(), key: Date.now() });
+        setEn('');
+        setPl('');
+        setExample('');
+        setPron('');
+        enRef.current?.focus();
+      }
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -68,7 +82,10 @@ export default function WordForm({ initial, submitLabel, onSubmit, onCancel }: P
           lang="en"
           placeholder="apple"
           value={en}
-          onChange={(e) => setEn(e.target.value)}
+          onChange={(e) => {
+            setEn(e.target.value);
+            setAdded(null);
+          }}
           autoFocus={!!initial}
           autoComplete="off"
           autoCapitalize="none"
@@ -92,9 +109,9 @@ export default function WordForm({ initial, submitLabel, onSubmit, onCancel }: P
         </label>
         <input
           id={`${id}-pr`}
-          placeholder="ˈæp.əl"
-          value={pronunciation}
-          onChange={(e) => setPronunciation(e.target.value)}
+          placeholder="E-pel"
+          value={pron}
+          onChange={(e) => setPron(e.target.value)}
           autoComplete="off"
           autoCapitalize="none"
           autoCorrect="off"
@@ -119,7 +136,7 @@ export default function WordForm({ initial, submitLabel, onSubmit, onCancel }: P
         />
       </div>
       <div className="form-actions">
-        <button type="submit" className="primary" disabled={!valid}>
+        <button type="submit" className="primary" disabled={!valid || saving}>
           <Icon name={initial ? 'check' : 'plus'} />
           {submitLabel}
         </button>
@@ -129,10 +146,18 @@ export default function WordForm({ initial, submitLabel, onSubmit, onCancel }: P
           </button>
         )}
       </div>
-      <p className={status ? 'form-status' : 'sr-only'} role="status" aria-live="polite">
-        {status && <Icon name="check" size={18} />}
-        {status}
-      </p>
+      <div className="form-status" role="status" aria-live="polite">
+        {added && (
+          <p className="added-toast" key={added.key}>
+            <span className="added-check">
+              <Icon name="check" size={16} />
+            </span>
+            <span>
+              Dodano: <strong lang="en">{added.en}</strong> – {added.pl}
+            </span>
+          </p>
+        )}
+      </div>
     </form>
   );
 }

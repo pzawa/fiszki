@@ -1,4 +1,5 @@
 import Icon from './Icon';
+import Pron from './Pron';
 
 interface Props {
   front: string;
@@ -6,7 +7,7 @@ interface Props {
   frontLang: 'en' | 'pl';
   backLang: 'en' | 'pl';
   example?: string;
-  /** Wymowa angielskiego słowa – pokazywana na tej stronie karty, gdzie jest angielski. */
+  /** Wymowa angielskiego słowa – pokazywana na stronie z angielskim. */
   pronunciation?: string;
   flipped: boolean;
   onFlip: () => void;
@@ -14,11 +15,7 @@ interface Props {
 
 const LANG_NAME = { en: 'Angielski', pl: 'Polski' };
 
-function Pron({ text }: { text?: string }) {
-  return text ? <span className="pron">[{text}]</span> : null;
-}
-
-export default function Flashcard({ front, back, frontLang, backLang, example, pronunciation, flipped, onFlip }: Props) {
+export default function Flashcard({ front, back, frontLang, backLang, example, pronunciation: pron, flipped, onFlip }: Props) {
   return (
     <>
       <button
@@ -34,7 +31,7 @@ export default function Flashcard({ front, back, frontLang, backLang, example, p
             <span className="term" lang={frontLang}>
               {front}
             </span>
-            {frontLang === 'en' && <Pron text={pronunciation} />}
+            {pron && frontLang === 'en' && <Pron text={pron} />}
             <span className="hint" id="flip-hint">
               <Icon name="flip" size={16} />
               Stuknij, aby odwrócić
@@ -45,10 +42,10 @@ export default function Flashcard({ front, back, frontLang, backLang, example, p
             <span className="term" lang={backLang}>
               {back}
             </span>
-            {backLang === 'en' && <Pron text={pronunciation} />}
+            {pron && backLang === 'en' && <Pron text={pron} />}
             <span className="sub" lang={frontLang}>
               {front}
-              {frontLang === 'en' && pronunciation && ` [${pronunciation}]`}
+              {frontLang === 'en' && pron && ` [${pron}]`}
             </span>
             {example && (
               <span className="example" lang="en">
