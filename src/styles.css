@@ -348,7 +348,8 @@ button.big {
   color: var(--danger);
 }
 
-input:not([type='checkbox']):not([type='radio']) {
+input:not([type='checkbox']):not([type='radio']),
+textarea {
   width: 100%;
   min-width: 0;
   min-height: 48px;
@@ -362,7 +363,16 @@ input:not([type='checkbox']):not([type='radio']) {
   font-size: 1.0625rem;
 }
 
-input::placeholder {
+textarea {
+  display: block;
+  /* wysokość ustawia WordForm według długości zdania */
+  resize: none;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+input::placeholder,
+textarea::placeholder {
   color: var(--muted);
   opacity: 0.8;
 }
@@ -701,6 +711,12 @@ label {
 .word-main .pl {
   color: var(--muted);
   overflow-wrap: anywhere;
+}
+
+.word-main .pron {
+  font-weight: 400;
+  font-size: 0.9rem;
+  color: var(--muted);
 }
 
 .word-main .example {
@@ -1061,6 +1077,11 @@ fieldset.option:first-of-type {
 }
 
 .face .sub {
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.face .pron {
   color: var(--muted);
   font-size: 1.05rem;
 }

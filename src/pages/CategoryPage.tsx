@@ -170,6 +170,7 @@ export default function CategoryPage() {
                   <div className="word-main">
                     <span className="en" lang="en">
                       {w.en}
+                      {w.pronunciation && <span className="pron"> [{w.pronunciation}]</span>}
                     </span>
                     <span className="pl">{w.pl}</span>
                     {w.example && (

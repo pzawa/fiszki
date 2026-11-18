@@ -191,6 +191,7 @@ export default function StudyPage() {
         frontLang={reverse ? 'pl' : 'en'}
         backLang={reverse ? 'en' : 'pl'}
         example={word.example}
+        pronunciation={word.pronunciation}
         flipped={flipped}
         onFlip={() => setFlipped((f) => !f)}
       />

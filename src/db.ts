@@ -17,6 +17,8 @@ export interface Word {
   en: string;
   pl: string;
   example?: string;
+  /** Wymowa angielskiego słowa, np. "ˈæp.əl" (dodane później – starsze słówka jej nie mają). */
+  pronunciation?: string;
   /** Aktualny odstęp między powtórkami w dniach (0 = w trakcie nauki). */
   interval: number;
   /** Współczynnik łatwości (SM-2), start 2.5, minimum 1.3. */
@@ -135,11 +137,18 @@ export interface WordInput {
   en: string;
   pl: string;
   example?: string;
+  pronunciation?: string;
 }
 
 function clean(input: WordInput): WordInput {
   const example = input.example?.trim();
-  return { en: input.en.trim(), pl: input.pl.trim(), example: example || undefined };
+  const pronunciation = input.pronunciation?.trim();
+  return {
+    en: input.en.trim(),
+    pl: input.pl.trim(),
+    example: example || undefined,
+    pronunciation: pronunciation || undefined,
+  };
 }
 
 export function addWord(categoryId: number, input: WordInput) {
