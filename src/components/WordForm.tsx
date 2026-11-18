@@ -22,6 +22,7 @@ export default function WordForm({ initial, submitLabel, onSubmit, onCancel }: P
   const [en, setEn] = useState(initial?.en ?? '');
   const [pl, setPl] = useState(initial?.pl ?? '');
   const [example, setExample] = useState(initial?.example ?? '');
+  const [pron, setPron] = useState(initial?.pronunciation ?? '');
   const [saving, setSaving] = useState(false);
   const [added, setAdded] = useState<Added | null>(null);
 
@@ -39,13 +40,14 @@ export default function WordForm({ initial, submitLabel, onSubmit, onCancel }: P
     if (!valid || saving) return;
     setSaving(true);
     try {
-      const result = await onSubmit({ en, pl, example });
+      const result = await onSubmit({ en, pl, example, pronunciation: pron });
       if (result === false) return;
       if (!initial) {
         setAdded({ en: en.trim(), pl: pl.trim(), key: Date.now() });
         setEn('');
         setPl('');
         setExample('');
+        setPron('');
         enRef.current?.focus();
       }
     } finally {
@@ -82,6 +84,20 @@ export default function WordForm({ initial, submitLabel, onSubmit, onCancel }: P
           onChange={(e) => setPl(e.target.value)}
           autoComplete="off"
           autoCapitalize="none"
+        />
+      </div>
+      <div className="field wide">
+        <label htmlFor={`${id}-pron`}>
+          Wymowa <span className="optional">(opcjonalnie)</span>
+        </label>
+        <input
+          id={`${id}-pron`}
+          placeholder="E-pel"
+          value={pron}
+          onChange={(e) => setPron(e.target.value)}
+          autoComplete="off"
+          autoCapitalize="none"
+          spellCheck={false}
         />
       </div>
       <div className="field wide">

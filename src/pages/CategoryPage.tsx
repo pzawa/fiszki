@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { addWord, db, deleteCategory, deleteWord, renameCategory, updateWord, type Word } from '../db';
 import WordForm from '../components/WordForm';
+import Pron from '../components/Pron';
 import Icon from '../components/Icon';
 import { Avatar, plural } from './CategoriesPage';
 import { formatDelay, isDueToday, isNew } from '../srs';
@@ -181,6 +182,7 @@ export default function CategoryPage() {
                     <span className="en" lang="en">
                       {w.en}
                     </span>
+                    {w.pronunciation && <Pron text={w.pronunciation} />}
                     <span className="pl">{w.pl}</span>
                     {w.example && (
                       <span className="example" lang="en">

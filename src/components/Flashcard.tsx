@@ -1,4 +1,5 @@
 import Icon from './Icon';
+import Pron from './Pron';
 
 interface Props {
   front: string;
@@ -6,13 +7,15 @@ interface Props {
   frontLang: 'en' | 'pl';
   backLang: 'en' | 'pl';
   example?: string;
+  /** Wymowa angielskiego słowa – pokazywana na stronie z angielskim. */
+  pronunciation?: string;
   flipped: boolean;
   onFlip: () => void;
 }
 
 const LANG_NAME = { en: 'Angielski', pl: 'Polski' };
 
-export default function Flashcard({ front, back, frontLang, backLang, example, flipped, onFlip }: Props) {
+export default function Flashcard({ front, back, frontLang, backLang, example, pronunciation: pron, flipped, onFlip }: Props) {
   return (
     <>
       <button
@@ -28,6 +31,7 @@ export default function Flashcard({ front, back, frontLang, backLang, example, f
             <span className="term" lang={frontLang}>
               {front}
             </span>
+            {pron && frontLang === 'en' && <Pron text={pron} />}
             <span className="hint" id="flip-hint">
               <Icon name="flip" size={16} />
               Stuknij, aby odwrócić
@@ -38,6 +42,7 @@ export default function Flashcard({ front, back, frontLang, backLang, example, f
             <span className="term" lang={backLang}>
               {back}
             </span>
+            {pron && backLang === 'en' && <Pron text={pron} />}
             <span className="sub" lang={frontLang}>
               {front}
             </span>

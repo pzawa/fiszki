@@ -1,5 +1,6 @@
-import Dexie, { type EntityTable } from 'dexie';
+import Dexie, { type EntityTable, type Transaction } from 'dexie';
 import { SEED_CATEGORIES } from './seed';
+import { WORD_PACKS, type WordPack } from './packs';
 
 export interface Category {
   id: number;
@@ -17,6 +18,8 @@ export interface Word {
   en: string;
   pl: string;
   example?: string;
+  /** Spolszczona wymowa angielskiego słowa, np. „ak-se-sy-BI-li-ti” (wielkie litery = akcent). */
+  pronunciation?: string;
   /** Aktualny odstęp między powtórkami w dniach (0 = w trakcie nauki). */
   interval: number;
   /** Współczynnik łatwości (SM-2), start 2.5, minimum 1.3. */
@@ -81,10 +84,53 @@ db.version(3)
     for (const c of own) await table.update(c.id, { position: ++pos });
   });
 
-// Pierwsze uruchomienie (pusta baza): od razu gotowe kategorie.
-db.on('populate', (tx) => {
+/**
+ * Dopisuje gotowe kategorie ze słówkami (np. WCAG, AI) na koniec listy.
+ * Jeśli kategoria o tej nazwie już istnieje, dodaje do niej tylko brakujące słówka (po angielskim słowie).
+ */
+async function installWordPacks(tx: Transaction, packs: WordPack[]) {
+  const categories = tx.table<Category, number>('categories');
+  const words = tx.table<Word, number>('words');
+  const all = await categories.toArray();
+  let pos = all.reduce((max, c) => Math.max(max, c.position ?? 0), 0);
   const now = Date.now();
-  tx.table('categories').bulkAdd(SEED_CATEGORIES.map((s, i) => ({ ...s, position: i + 1, createdAt: now })));
+  let t = now;
+  for (const pack of packs) {
+    const match = all.find((c) => c.name.trim().toLowerCase() === pack.name.toLowerCase());
+    const categoryId =
+      match?.id ??
+      (await categories.add({ name: pack.name, description: pack.description, position: ++pos, createdAt: now } as Category));
+    const have = new Set(
+      (await words.where('categoryId').equals(categoryId).toArray()).map((w) => w.en.trim().toLowerCase()),
+    );
+    const fresh = pack.words
+      .filter((w) => !have.has(w.en.toLowerCase()))
+      .map((w) => ({
+        ...w,
+        categoryId,
+        interval: 0,
+        ease: 2.5,
+        due: now,
+        reps: 0,
+        lapses: 0,
+        // Kolejne createdAt – nowe słówka wchodzą do nauki w kolejności z listy.
+        createdAt: t++,
+      }));
+    await words.bulkAdd(fresh as Word[]);
+  }
+}
+
+// v4: pole `pronunciation` (wymowa, opcjonalne – bez indeksu) + 5 gotowych kategorii ze słówkami:
+// WCAG, AI, Frontend, UI i UX, Claude Code. Istniejące kategorie i słówka zostają bez zmian.
+db.version(4)
+  .stores({})
+  .upgrade((tx) => installWordPacks(tx, WORD_PACKS));
+
+// Pierwsze uruchomienie (pusta baza): od razu gotowe kategorie.
+db.on('populate', async (tx) => {
+  const now = Date.now();
+  await tx.table('categories').bulkAdd(SEED_CATEGORIES.map((s, i) => ({ ...s, position: i + 1, createdAt: now })));
+  await installWordPacks(tx, WORD_PACKS);
 });
 
 /** Kategorie w kolejności wyświetlania. */
@@ -135,11 +181,18 @@ export interface WordInput {
   en: string;
   pl: string;
   example?: string;
+  pronunciation?: string;
 }
 
 function clean(input: WordInput): WordInput {
   const example = input.example?.trim();
-  return { en: input.en.trim(), pl: input.pl.trim(), example: example || undefined };
+  const pronunciation = input.pronunciation?.trim();
+  return {
+    en: input.en.trim(),
+    pl: input.pl.trim(),
+    example: example || undefined,
+    pronunciation: pronunciation || undefined,
+  };
 }
 
 export function addWord(categoryId: number, input: WordInput) {

@@ -1457,3 +1457,14 @@ fieldset.option:first-of-type {
     outline: 2px solid Highlight;
   }
 }
+
+/* Wymowa (spolszczona) */
+.pron {
+  color: var(--muted);
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+}
+
+.face .pron {
+  font-size: 1.05rem;
+}
