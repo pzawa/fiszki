@@ -1,12 +1,19 @@
-import { useId, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import type { WordInput } from '../db';
 import Icon from './Icon';
 
 interface Props {
   initial?: WordInput;
   submitLabel: string;
-  onSubmit: (input: WordInput) => Promise<unknown> | void;
+  /** Zwróć `false`, żeby anulować (formularz zostanie wypełniony). */
+  onSubmit: (input: WordInput) => Promise<unknown> | unknown;
   onCancel?: () => void;
+}
+
+interface Added {
+  en: string;
+  pl: string;
+  key: number;
 }
 
 export default function WordForm({ initial, submitLabel, onSubmit, onCancel }: Props) {
@@ -15,20 +22,34 @@ export default function WordForm({ initial, submitLabel, onSubmit, onCancel }: P
   const [en, setEn] = useState(initial?.en ?? '');
   const [pl, setPl] = useState(initial?.pl ?? '');
   const [example, setExample] = useState(initial?.example ?? '');
-  const [status, setStatus] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [added, setAdded] = useState<Added | null>(null);
+
+  // Komunikat „Dodano” znika po kilku sekundach.
+  useEffect(() => {
+    if (!added) return;
+    const t = setTimeout(() => setAdded(null), 4000);
+    return () => clearTimeout(t);
+  }, [added]);
 
   const valid = en.trim() !== '' && pl.trim() !== '';
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!valid) return;
-    await onSubmit({ en, pl, example });
-    if (!initial) {
-      setStatus(`Dodano: ${en.trim()} – ${pl.trim()}`);
-      setEn('');
-      setPl('');
-      setExample('');
-      enRef.current?.focus();
+    if (!valid || saving) return;
+    setSaving(true);
+    try {
+      const result = await onSubmit({ en, pl, example });
+      if (result === false) return;
+      if (!initial) {
+        setAdded({ en: en.trim(), pl: pl.trim(), key: Date.now() });
+        setEn('');
+        setPl('');
+        setExample('');
+        enRef.current?.focus();
+      }
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -42,7 +63,10 @@ export default function WordForm({ initial, submitLabel, onSubmit, onCancel }: P
           lang="en"
           placeholder="apple"
           value={en}
-          onChange={(e) => setEn(e.target.value)}
+          onChange={(e) => {
+            setEn(e.target.value);
+            setAdded(null);
+          }}
           autoFocus={!!initial}
           autoComplete="off"
           autoCapitalize="none"
@@ -74,7 +98,7 @@ export default function WordForm({ initial, submitLabel, onSubmit, onCancel }: P
         />
       </div>
       <div className="form-actions">
-        <button type="submit" className="primary" disabled={!valid}>
+        <button type="submit" className="primary" disabled={!valid || saving}>
           <Icon name={initial ? 'check' : 'plus'} />
           {submitLabel}
         </button>
@@ -84,9 +108,18 @@ export default function WordForm({ initial, submitLabel, onSubmit, onCancel }: P
           </button>
         )}
       </div>
-      <p className="sr-only" role="status" aria-live="polite">
-        {status}
-      </p>
+      <div className="form-status" role="status" aria-live="polite">
+        {added && (
+          <p className="added-toast" key={added.key}>
+            <span className="added-check">
+              <Icon name="check" size={16} />
+            </span>
+            <span>
+              Dodano: <strong lang="en">{added.en}</strong> – {added.pl}
+            </span>
+          </p>
+        )}
+      </div>
     </form>
   );
 }
