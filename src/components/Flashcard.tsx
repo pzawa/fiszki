@@ -45,7 +45,13 @@ export default function Flashcard({ front, back, frontLang, backLang, example, p
             {pron && backLang === 'en' && <Pron text={pron} />}
             <span className="sub" lang={frontLang}>
               {front}
-              {frontLang === 'en' && pron && ` [${pron}]`}
+              {/* Wymowa jest spolszczona – czytnik ma ją czytać polskim głosem. */}
+              {frontLang === 'en' && pron && (
+                <span lang="pl">
+                  {' '}
+                  <span className="sr-only">Wymowa: </span>[{pron}]
+                </span>
+              )}
             </span>
             {example && (
               <span className="example" lang="en">
