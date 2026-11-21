@@ -1132,6 +1132,11 @@ fieldset.option:first-of-type {
   white-space: normal;
 }
 
+.face.front {
+  /* Miejsce na podpowiedź „Stuknij, aby odwrócić” pod dłuższym przykładem. */
+  padding-bottom: 52px;
+}
+
 .face.back {
   transform: rotateY(180deg);
   background: linear-gradient(160deg, var(--accent-soft), var(--surface) 70%);
@@ -1156,11 +1161,6 @@ fieldset.option:first-of-type {
   font-weight: 700;
   line-height: 1.15;
   overflow-wrap: anywhere;
-}
-
-.face .sub {
-  color: var(--muted);
-  font-size: 1.05rem;
 }
 
 .face .pron {
