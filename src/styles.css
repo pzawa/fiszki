@@ -848,18 +848,29 @@ legend {
   border-top: 0;
 }
 
-.picker-row .name {
+/* Nazwa i etykiety w jednym bloku: gdy brakuje miejsca, etykiety schodzą pod nazwę,
+   zamiast ściskać nazwę do jednej litery w wierszu. */
+.picker-text {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 4px;
+}
+
+.picker-row .name {
+  flex: 1 1 9em;
+  min-width: 0;
   font-weight: 600;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .picker-row .pills {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  justify-content: flex-end;
 }
 
 /* Własny wygląd pola wyboru – nadal natywny <input>, więc działa z czytnikami i klawiaturą. */

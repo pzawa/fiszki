@@ -52,16 +52,18 @@ export default function CategoryPicker({ categories, stats, selected, onChange }
           <label key={c.id} className="picker-row">
             <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} />
             <Avatar category={c} />
-            <span className="name">{c.name}</span>
-            <span className="pills">
-              {s.due > 0 && <span className="pill due">{s.due} do powtórki</span>}
-              {s.fresh > 0 && (
-                <span className="pill new">
-                  {s.fresh} {plural(s.fresh, 'nowe', 'nowe', 'nowych')}
-                </span>
-              )}
-              {s.total === 0 && <span className="muted">pusta</span>}
-              {s.total > 0 && s.due === 0 && s.fresh === 0 && <span className="muted">powtórzone</span>}
+            <span className="picker-text">
+              <span className="name">{c.name}</span>
+              <span className="pills">
+                {s.due > 0 && <span className="pill due">{s.due} do powtórki</span>}
+                {s.fresh > 0 && (
+                  <span className="pill new">
+                    {s.fresh} {plural(s.fresh, 'nowe', 'nowe', 'nowych')}
+                  </span>
+                )}
+                {s.total === 0 && <span className="muted">pusta</span>}
+                {s.total > 0 && s.due === 0 && s.fresh === 0 && <span className="muted">powtórzone</span>}
+              </span>
             </span>
           </label>
         );
