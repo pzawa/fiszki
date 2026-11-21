@@ -37,7 +37,7 @@ describe('migracja v3 → v4', () => {
     old.close();
 
     const db = await loadApp();
-    expect(db.verno).toBe(5);
+    expect(db.verno).toBe(6);
 
     // Stare dane bez zmian.
     const cat = await db.words.where('en').equals('cat').first().catch(() => undefined);
@@ -80,6 +80,9 @@ describe('migracja v3 → v4', () => {
     expect(await db.words.count()).toBe(all.reduce((n, p) => n + p.words.length, 0));
     const hello = cats.find((c) => c.name === 'Cześć!')!;
     expect(await db.words.where('categoryId').equals(hello.id).count()).toBe(50);
+    // v6 przy nowej instalacji: każde gotowe słówko ma przykładowe zdanie.
+    const words = await db.words.toArray();
+    expect(words.filter((w) => !w.example)).toEqual([]);
   });
 });
 
@@ -102,7 +105,7 @@ describe('migracja v4 → v5', () => {
     old.close();
 
     const db = await loadApp();
-    expect(db.verno).toBe(5);
+    expect(db.verno).toBe(6);
     const cats = await db.categories.orderBy('position').toArray();
 
     expect(cats.find((c) => c.name === 'Hotel')).toBeUndefined();
@@ -117,5 +120,38 @@ describe('migracja v4 → v5', () => {
 
     const verbs = await db.words.where('categoryId').equals(cats.at(-1)!.id).toArray();
     expect(verbs.find((w) => w.en === 'go – went – gone')).toMatchObject({ pl: 'iść, jechać' });
+  });
+});
+
+describe('migracja v5 → v6', () => {
+  it('dopisuje przykładowe zdania tylko tam, gdzie ich nie ma; nie rusza jej przykładów ani postępów', async () => {
+    const old = new Dexie('fiszki');
+    old.version(5).stores({ categories: '++id, name, position', words: '++id, categoryId, due', meta: 'key' });
+    await old.open();
+    const helloId = (await old.table('categories').add({ name: 'Cześć!', position: 1, createdAt: 1 })) as number;
+    const verbsId = (await old.table('categories').add({ name: 'Czasowniki nieregularne', position: 2, createdAt: 1 })) as number;
+    const ownId = (await old.table('categories').add({ name: 'Moje', position: 3, createdAt: 1 })) as number;
+    const base = { interval: 4, ease: 2.4, due: 99, reps: 3, lapses: 1, createdAt: 5 };
+    await old.table('words').bulkAdd([
+      { ...base, categoryId: helloId, en: 'hello', pl: 'cześć' },
+      { ...base, categoryId: helloId, en: 'Goodbye', pl: 'do widzenia', example: 'Moje własne zdanie.' },
+      { ...base, categoryId: helloId, en: 'hi', pl: 'hej', example: '   ' },
+      { ...base, categoryId: verbsId, en: 'go – went – gone', pl: 'iść' },
+      { ...base, categoryId: ownId, en: 'hello', pl: 'cześć' }, // własna kategoria – brak gotowych zdań
+    ]);
+    old.close();
+
+    const db = await loadApp();
+    expect(db.verno).toBe(6);
+    const words = await db.words.toArray();
+    const find = (cat: number, en: string) => words.find((w) => w.categoryId === cat && w.en === en)!;
+
+    expect(find(helloId, 'hello').example).toMatch(/hello/i);
+    expect(find(helloId, 'hello')).toMatchObject({ pl: 'cześć', interval: 4, reps: 3, lapses: 1, due: 99 });
+    expect(find(helloId, 'Goodbye').example).toBe('Moje własne zdanie.');
+    expect(find(helloId, 'hi').example?.trim()).not.toBe('');
+    expect(find(verbsId, 'go – went – gone').example).toMatch(/went/);
+    expect(find(ownId, 'hello').example).toBeUndefined();
+    expect(words).toHaveLength(5); // v6 nie dodaje słówek
   });
 });

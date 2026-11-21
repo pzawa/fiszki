@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable, type Transaction } from 'dexie';
 import { SEED_CATEGORIES } from './seed';
 import { IRREGULAR_VERBS_PACK, SEED_WORD_PACKS, WORD_PACKS, type WordPack } from './packs';
+import { EXAMPLES, exampleFor } from './examples';
 
 export interface Category {
   id: number;
@@ -137,6 +138,29 @@ db.version(5)
     await installWordPacks(tx, [IRREGULAR_VERBS_PACK]);
   });
 
+/**
+ * Uzupełnia przykładowe zdania w gotowych słówkach (dopasowanie: nazwa kategorii + angielskie słowo).
+ * Tylko tam, gdzie pole `example` jest puste – własnych przykładów użytkowniczki nie nadpisuje.
+ */
+async function installExamples(tx: Transaction) {
+  const categories = await tx.table<Category, number>('categories').toArray();
+  const names = new Map(categories.map((c) => [c.id, c.name]));
+  await tx
+    .table<Word, number>('words')
+    .toCollection()
+    .modify((w) => {
+      if (w.example?.trim()) return;
+      const name = names.get(w.categoryId);
+      const example = name && exampleFor(EXAMPLES, name, w.en);
+      if (example) w.example = example;
+    });
+}
+
+// v6: przykładowe zdania do gotowych słówek (tylko puste pole `example`).
+db.version(6)
+  .stores({})
+  .upgrade((tx) => installExamples(tx));
+
 // Pierwsze uruchomienie (pusta baza): od razu gotowe kategorie.
 db.on('populate', async (tx) => {
   const now = Date.now();
@@ -144,6 +168,7 @@ db.on('populate', async (tx) => {
   await installWordPacks(tx, WORD_PACKS);
   await installWordPacks(tx, SEED_WORD_PACKS, { createMissing: false });
   await installWordPacks(tx, [IRREGULAR_VERBS_PACK]);
+  await installExamples(tx);
 });
 
 /** Kategorie w kolejności wyświetlania. */

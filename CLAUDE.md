@@ -30,6 +30,10 @@ Nowe pola w typach oznaczaj jako opcjonalne albo uzupełniaj je w `upgrade`.
   (WCAG, AI, Frontend, UI i UX, Claude Code), v5 – po 50 słówek do 40 startowych (`createMissing: false`, więc
   usunięta kategoria nie wraca) i „Czasowniki nieregularne”. Słówka już obecne w kategorii (po `en`) są pomijane.
   Nie zmieniaj list użytych przez istniejące wersje – nowe słówka to nowa wersja bazy.
+- Przykładowe zdania (`src/examples.ts`, listy w `src/examples/`, format `angielski | zdanie` pod `## Kategoria`)
+  dopisuje `installExamples` w v6 i przy nowej instalacji – tylko do słówek z pustym `example` (dopasowanie: nazwa
+  kategorii + `en`), więc jej własnych przykładów nie nadpisuje. `src/examples.test.ts` pilnuje, by każde gotowe
+  słówko miało zdanie, a każde zdanie trafiało w istniejące słówko.
 
 ## Przed publikacją
 - `npm test` i `npm run build` muszą przechodzić,
